@@ -2,18 +2,23 @@ package kpn.core.tools
 
 import kpn.api.common.tiles.ZoomLevel
 import kpn.api.custom.NetworkType
+import kpn.core.database.views.analyzer.AnalyzerDesign
 import kpn.core.db.couch.Couch
 import kpn.core.mail.Mail
 import kpn.core.mail.MailConfigReader
 import kpn.core.mail.MailImpl
-import kpn.core.tiles.TileAnalyzer
-import kpn.core.tiles.TileAnalyzerImpl
-import kpn.core.tiles.TileBuilder
-import kpn.core.tiles.TileRepositoryImpl
-import kpn.core.tiles.TilesBuilder
-import kpn.core.tiles.raster.RasterTileBuilder
-import kpn.core.tiles.vector.VectorTileBuilder
+import kpn.server.analyzer.engine.tiles.TileAnalyzer
+import kpn.server.analyzer.engine.tiles.TileAnalyzerImpl
+import kpn.server.analyzer.engine.tiles.TileBuilder
+import kpn.server.analyzer.engine.tiles.TileFileRepositoryImpl
+import kpn.server.analyzer.engine.tiles.TilesBuilder
+import kpn.server.analyzer.engine.tiles.raster.RasterTileBuilder
+import kpn.server.analyzer.engine.tiles.vector.VectorTileBuilder
 import kpn.core.util.Log
+import kpn.server.analyzer.engine.CouchIndexer
+import kpn.server.analyzer.engine.tile.NodeTileAnalyzerImpl
+import kpn.server.analyzer.engine.tile.RouteTileAnalyzerImpl
+import kpn.server.analyzer.engine.tile.TileCalculatorImpl
 import kpn.server.repository.NetworkRepositoryImpl
 import kpn.server.repository.OrphanRepositoryImpl
 import kpn.server.repository.RouteRepositoryImpl
@@ -40,11 +45,16 @@ object TileTool {
         case Some(options) =>
 
           def createTilesBuilder(tileBuilder: TileBuilder, extension: String): TilesBuilder = {
-            val tileRepository = new TileRepositoryImpl(options.tileDir, extension)
-            new TilesBuilder(tileBuilder, tileRepository)
+            val tileCalculator = new TileCalculatorImpl()
+            val nodeTileAnalyzer = new NodeTileAnalyzerImpl(tileCalculator)
+            val routeTileAnalyzer = new RouteTileAnalyzerImpl(tileCalculator)
+            val tileFileRepository = new TileFileRepositoryImpl(options.tileDir, extension)
+            new TilesBuilder(tileBuilder, tileFileRepository, nodeTileAnalyzer, routeTileAnalyzer)
           }
 
           Couch.executeIn(options.analysisDatabaseName) { database =>
+
+            new CouchIndexer(database, AnalyzerDesign).index()
 
             val tileAnalyzer = {
               val networkRepository = new NetworkRepositoryImpl(database)

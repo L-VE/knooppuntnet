@@ -58,7 +58,10 @@ class NodeRepositoryImpl(analysisDatabase: Database) extends NodeRepository {
       }
 
       if (docs.nonEmpty) {
-        analysisDatabase.bulkSave(docs)
+        val groupSize = 50
+        docs.sliding(groupSize, groupSize).toSeq.foreach { docsGroup =>
+          analysisDatabase.bulkSave(docsGroup)
+        }
       }
 
       (s"save ${nodes.size} nodes (new=${newDocs.size}, updated=${updateDocs.size})", docs.nonEmpty)
@@ -80,7 +83,7 @@ class NodeRepositoryImpl(analysisDatabase: Database) extends NodeRepository {
   }
 
   override def nodeNetworkReferences(nodeId: Long, timeout: Timeout, stale: Boolean = true): Seq[NodeNetworkReference] = {
-    NodeNetworkReferenceView.query(analysisDatabase, nodeId, stale = false)
+    NodeNetworkReferenceView.query(analysisDatabase, nodeId, stale)
   }
 
   override def nodeOrphanRouteReferences(nodeId: Long, timeout: Timeout, stale: Boolean = true): Seq[NodeOrphanRouteReference] = {

@@ -29,10 +29,14 @@ case class Query[T](
   reduce: Option[String] = None,
   descending: Option[String] = None,
   includeDocs: Option[String] = None,
-  groupLevel: Option[Int] = None,
-  limit: Option[Int] = None,
-  skip: Option[Int] = None
+  groupLevel: Option[Long] = None,
+  limit: Option[Long] = None,
+  skip: Option[Long] = None
 ) {
+
+  def args(value: Seq[Any]): Query[T] = {
+    copy(args = Some(value))
+  }
 
   def reduce(value: Boolean): Query[T] = {
     copy(reduce = Some(value.toString))
@@ -62,15 +66,15 @@ case class Query[T](
     copy(endKey = Some(endKey))
   }
 
-  def limit(rowCount: Int): Query[T] = {
+  def limit(rowCount: Long): Query[T] = {
     copy(limit = Some(rowCount))
   }
 
-  def skip(rowCount: Int): Query[T] = {
+  def skip(rowCount: Long): Query[T] = {
     copy(skip = Some(rowCount))
   }
 
-  def groupLevel(groupLevel: Int): Query[T] = {
+  def groupLevel(groupLevel: Long): Query[T] = {
     copy(groupLevel = Some(groupLevel))
   }
 

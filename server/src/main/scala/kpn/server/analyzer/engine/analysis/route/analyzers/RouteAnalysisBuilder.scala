@@ -6,22 +6,28 @@ import kpn.api.common.data.Way
 import kpn.api.common.route.RouteInfo
 import kpn.api.common.route.RouteInfoAnalysis
 import kpn.api.common.route.RouteMap
+import kpn.api.common.tiles.ZoomLevel
 import kpn.api.custom.Fact
 import kpn.api.custom.Fact.RouteBroken
 import kpn.api.custom.RouteMemberInfo
 import kpn.api.custom.Timestamp
 import kpn.core.analysis.RouteMember
 import kpn.core.analysis.RouteMemberWay
+import kpn.server.analyzer.engine.tiles.TileDataRouteBuilder
 import kpn.server.analyzer.engine.analysis.route.RouteAnalysis
 import kpn.server.analyzer.engine.analysis.route.RouteAnalyzerFunctions
 import kpn.server.analyzer.engine.analysis.route.RouteNodeAnalysis
 import kpn.server.analyzer.engine.analysis.route.RouteStructure
 import kpn.server.analyzer.engine.analysis.route.RouteStructureFormatter
 import kpn.server.analyzer.engine.analysis.route.domain.RouteAnalysisContext
+import kpn.server.analyzer.engine.tile.RouteTileAnalyzer
 
 import scala.collection.mutable.ListBuffer
 
-class RouteAnalysisBuilder(context: RouteAnalysisContext) {
+class RouteAnalysisBuilder(
+  context: RouteAnalysisContext,
+  routeTileAnalyzer: RouteTileAnalyzer
+) {
 
   val facts: ListBuffer[Fact] = ListBuffer[Fact]()
   facts ++= context.facts
@@ -98,7 +104,7 @@ class RouteAnalysisBuilder(context: RouteAnalysisContext) {
       )
     }
 
-    val length: Int = ways.map(_.length).sum
+    val length: Long = ways.map(_.length).sum
 
     val routeWays: Seq[Way] = {
       routeMembers.flatMap {
@@ -151,7 +157,8 @@ class RouteAnalysisBuilder(context: RouteAnalysisContext) {
       context.loadedRoute.relation.tags
     )
 
-    RouteInfo(
+
+    val routeInfo = RouteInfo(
       summary,
       active = true,
       orphan = context.orphan,
@@ -160,7 +167,20 @@ class RouteAnalysisBuilder(context: RouteAnalysisContext) {
       lastUpdated,
       context.loadedRoute.relation.tags,
       facts,
-      Some(routeAnalysis)
+      Some(routeAnalysis),
+      Seq()
     )
+
+    val tileNames = {
+      val tiles = (ZoomLevel.minZoom to ZoomLevel.vectorTileMaxZoom).flatMap { z =>
+        val b = new TileDataRouteBuilder(z)
+        b.build(routeInfo).toSeq.flatMap { tileDataRoute =>
+          routeTileAnalyzer.tiles(z, tileDataRoute)
+        }
+      }
+      tiles.map(tile => s"${routeInfo.summary.networkType.name}-${tile.name}")
+    }
+
+    routeInfo.copy(tiles = tileNames)
   }
 }

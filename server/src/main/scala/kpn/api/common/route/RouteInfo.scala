@@ -12,12 +12,13 @@ case class RouteInfo(
   summary: RouteSummary,
   active: Boolean,
   orphan: Boolean,
-  version: Int,
+  version: Long,
   changeSetId: Long,
   lastUpdated: Timestamp,
   tags: Tags,
   facts: Seq[Fact],
-  analysis: Option[RouteInfoAnalysis]
+  analysis: Option[RouteInfoAnalysis],
+  tiles: Seq[String]
 ) extends Tagable {
   def id: Long = summary.id
 
